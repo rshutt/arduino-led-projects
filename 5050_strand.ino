@@ -642,11 +642,11 @@ void do_random_brightness() {
 
     unsigned long leftoverMillis = fmod(routineDurationMillis, beatMillis);
 
-    if(loopDurationMillis > (2 * beatMillis)) {
+    if(loopDurationMillis > (beatMillis / 8)) {
       Serial.println("Falling behind: " + String(loopDurationMillis)); 
     }
     if(leftoverMillis > 0) {
-      Serial.println("Loop: " + String(loopCtr) + ", delaying: " + String(leftoverMillis));    
+      Serial.println("Loop: " + String(loopCtr) + ", expected loop: " + String((endMillis - startRoutineMillis) / beatMillis) + ", delaying: " + String(leftoverMillis));    
       delay(leftoverMillis);
     }
   }
