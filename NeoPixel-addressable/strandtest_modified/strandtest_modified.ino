@@ -110,10 +110,10 @@ IPAddress APStaticSN  = IPAddress(255, 255, 255, 0);
 
 #include <ESP_WiFiManager.h>
 
-#define LED_PIN    D1
+#define LED_PIN    D8
 #define MIC_PIN    A0
 
-#define LED_COUNT 900
+#define LED_COUNT 600
 
 #define BASE_BPM 174.0 * 8.0
 

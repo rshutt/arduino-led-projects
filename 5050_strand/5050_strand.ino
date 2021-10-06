@@ -612,16 +612,25 @@ void loop() {
     max_brightness = 8;
   }
 
-  do_random_brightness();
+  int randnum = random(4);
 
-  // do_breathing(0, 0, 1);
+  Serial.println("RNG: " + String(randnum));
+  
+  if(randnum < 3) {
+    do_random_brightness();
+  } else {
+    float redfraction = random(100);
+    float greenfraction = random(100);
+    float bluefraction = random(100);
+    do_breathing(redfraction / 100, greenfraction / 100, bluefraction / 100);
+  }
 }
 
 void do_random_brightness() {
   int red_max = random(max_brightness);
   int blue_max = random(max_brightness);
   int green_max = random(max_brightness);
-
+  int loopsRequested = 32;
   int loopCtr = 0;
 
   struct loop { 
@@ -632,17 +641,18 @@ void do_random_brightness() {
     unsigned long delayMillis;
   };
 
-  struct loop loops[8];
+  struct loop loops[loopsRequested];
 
   unsigned long startRoutineMillis = millis();
 
-  for(int i=0;i<8;i++) {
+  for(int i=0;i<loopsRequested;i++) {
     loops[i].targetStartMillis = startRoutineMillis + (beatMillis * i);
     loops[i].targetEndMillis = loops[i].targetStartMillis + beatMillis;
   }
 
-  for(int i=max_brightness;i>=0;i-=(max_brightness / 7),loopCtr++) {
+  for(int i=max_brightness;loopCtr<loopsRequested;i-=(max_brightness / (loopsRequested)),loopCtr++) {
     if(millis() < loops[loopCtr].targetStartMillis) {
+      Serial.println(String(millis()) + " < " + String(loops[loopCtr].targetStartMillis));
       delay(1);
     }
     
@@ -655,7 +665,7 @@ void do_random_brightness() {
     loops[loopCtr].actualEndMillis = millis();    
     
     if(loops[loopCtr].actualEndMillis  > loops[loopCtr].targetEndMillis) {
-      Serial.println("Falling behind!");
+      Serial.println("Falling behind: " + String(loops[loopCtr].actualEndMillis) + " > " + String(loops[loopCtr].targetEndMillis));
     }
 
     while(millis() < loops[loopCtr].targetEndMillis) {
@@ -728,12 +738,32 @@ void do_breathing(float redfactor, float greenfactor, float bluefactor) {
   float gamma = 0.18;
   float beta = 0.5;
   
-  unsigned long startRoutineMillis = millis();
   int loopCtr = 0;
-  
-  for(int a=0; a<smoothness_pts; a++) {
-    unsigned long startLoopMillis = millis();
+
+  struct loop { 
+    unsigned long targetStartMillis;
+    unsigned long actualStartMillis;
+    unsigned long targetEndMillis;
+    unsigned long actualEndMillis;
+    unsigned long delayMillis;
+  };
+
+  struct loop loops[(int)floor(smoothness_pts)];
+
+  unsigned long startRoutineMillis = millis();
+
+  for(int i=0;i<smoothness_pts;i++) {
+    loops[i].targetStartMillis = startRoutineMillis + (beatMillis * i);
+    loops[i].targetEndMillis = loops[i].targetStartMillis + beatMillis;
+  }
+
+  for(int a=0; a<smoothness_pts; a++,loopCtr++) {
+    if(millis() < loops[loopCtr].targetStartMillis) {
+      delay(1);
+    }
     
+    loops[loopCtr].actualStartMillis = millis();
+
     float intensity = (max_brightness - 20) * (exp(-(pow(((a/smoothness_pts)-beta)/gamma,2.0))/2.0));
 
     int red = intensity * redfactor;
@@ -744,25 +774,17 @@ void do_breathing(float redfactor, float greenfactor, float bluefactor) {
     analogWrite(GREEN_PIN, green);
     analogWrite(BLUE_PIN, blue);
     
-    unsigned long endMillis = millis();
-    unsigned long routineDurationMillis = endMillis - startRoutineMillis;
-    unsigned long loopDurationMillis = endMillis - startLoopMillis;
-    unsigned long loopLeftoverMillis = loopDurationMillis - beatMillis;
+    loops[loopCtr].actualEndMillis = millis();    
     
-    loopCtr++;
-    
-    unsigned long leftoverMillis = fmod(routineDurationMillis, beatMillis);
-
-    if(loopDurationMillis > (2 * beatMillis)) {
-      Serial.println("Falling behind: " + String(loopDurationMillis)); 
+    if(loops[loopCtr].actualEndMillis  > loops[loopCtr].targetEndMillis) {
+      Serial.println("Falling behind!");
     }
-    if(leftoverMillis > 0) {
-      // Serial.println("Loop: " + String(loopCtr) + ", delaying: " + String(leftoverMillis));    
-      delay(leftoverMillis);
+
+    while(millis() < loops[loopCtr].targetEndMillis) {
+      delay(1);
     }
   }
-  
-  Serial.println("Loop duration: " + String(millis() - startRoutineMillis) + " Loops: " + String(loopCtr));
+
   Serial.println("Expected Loops: " + String((millis() - startRoutineMillis) / beatMillis) + " Actual Loops: " + String(loopCtr));
 }
 
