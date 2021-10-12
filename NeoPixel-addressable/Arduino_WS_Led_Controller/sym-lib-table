@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name WeMosD1)(type Legacy)(uri /Users/randall/Environment/Arduino_WS_Led_Controller/Libraries/WeMos_D1/d1_mini_shield-cache.lib)(options "")(descr ""))
+  (lib (name Arduino_WS_Led_Controller-eagle-import)(type Legacy)(uri ${KIPRJMOD}/Arduino_WS_Led_Controller-eagle-import.lib)(options "")(descr ""))
+)

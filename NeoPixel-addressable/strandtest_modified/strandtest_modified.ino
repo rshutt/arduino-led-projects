@@ -115,10 +115,11 @@ IPAddress APStaticSN  = IPAddress(255, 255, 255, 0);
 
 #define LED_COUNT 600
 
-#define BASE_BPM 174.0 * 8.0
+#define BASE_BPM 174.0
 
 #define MAX_EFFECT_MODE 14
 
+int bpm;
 float beatMillis;
 int effectMode=0;
 
@@ -345,6 +346,40 @@ void restServerRouting() {
     serializeJson(doc, buf);
     server.send(200, F("application/json"), buf);
   });
+  server.on("/bpm", HTTP_GET, []() {
+    DynamicJsonDocument doc(512);
+
+    doc["bpm"] = bpm;
+    serializeJson(doc, buf);
+    server.send(200, F("application/json"), buf);
+  });
+  server.on("/bpm". HTTP_POST, []() {
+    String postBody = server.arg("plain");
+
+    DynamicJsonDocument doc(512);
+
+    DeserializationError error = deserializeJson(doc, postBody);
+    if(error) {
+      Serial.print(F("Error parsing JSON "));
+      Serial.println(error.c_str());
+
+      String msg = error.c_str();
+
+      server.send(400, F("text/html"),
+        "Error parsing json body!<br>\n" + msg);
+    } else {
+     JsonObject postObj = doc.as<JsonObject>();
+     String foo;
+     serializeJson(postObj, foo);
+     Serial.println(foo);
+
+     DynamicJsonDocument responseDoc(512);
+
+     if(postObj.containsKey("bpm")) {
+      
+     }
+    }
+  }
   server.on("/effectMode", HTTP_POST, []() {
     String postBody = server.arg("plain");
 
@@ -609,8 +644,11 @@ void setup() {
   } else {
     Serial.println(ESP_wifiManager.getStatus(WiFi.status()));
   }
-  
+
+  bpm = BASE_BPM;
   beatMillis = (1.0 / (BASE_BPM / 60.0)) * 1000.0;
+
+  beatMillis = beatMillis/8;
   
   Serial.print("Beat should be every: ");
   Serial.print(beatMillis);
@@ -625,6 +663,22 @@ void setup() {
   Serial.println("HTTP server started");
 }
 
+void handleSerialInput(char input) {
+  Serial.print("Serial Received '" + String(input) + "'\n");
+
+  if(input != -1) {
+    if(input == '+' && effectMode <  MAX_EFFECT_MODE) {
+      effectMode++; 
+    } else if(input == '-' && effectMode > 0) {
+      effectMode--;
+    }
+      
+    Serial.print("Switching to effect mode ");
+    Serial.print(effectMode);
+    Serial.print("\n");
+  }
+}
+
 void loop() {
   int micSensor = 0;
 
@@ -632,28 +686,9 @@ void loop() {
   server.handleClient();
   
   micSensor = analogRead(MIC_PIN);
-  Serial.print("mic val: ");
-  Serial.print(micSensor);
-  Serial.print("\n");
-
-  if (Serial.available() > 0) {
-    int input = Serial.read();
-
-    Serial.print("Received ");
-    Serial.print(input);
-    Serial.print(" on serial\n");
-
-    if(input != -1) {
-      if(input == '+' && effectMode <  MAX_EFFECT_MODE) {
-        effectMode++; 
-      } else if(input == '-' && effectMode > 0) {
-        effectMode--;
-      }
-      
-      Serial.print("Switching to effect mode ");
-      Serial.print(effectMode);
-      Serial.print("\n");
-    }
+ 
+  if (Serial.available()) {
+    handleSerialInput(Serial.read());
   }
 
   switch(effectMode) {
@@ -700,7 +735,7 @@ void loop() {
       breathe(0, 255, 0);
       break;
     case 14:
-      breathe(0,  0, 255);
+      breathe(0, 0, 255);
       break;
     default:
       // noop
@@ -710,6 +745,14 @@ void loop() {
       break;
   }
 }
+
+struct loop { 
+  unsigned long targetStartMillis;
+  unsigned long actualStartMillis;
+  unsigned long targetEndMillis;
+  unsigned long actualEndMillis;
+  unsigned long delayMillis;
+};
 
 void breathe(int red, int green, int blue) {
   Serial.print("Entering breathe with color: ");
@@ -782,7 +825,7 @@ void solid_color(int red, int green, int blue) {
     strip.setPixelColor(c, red, green, blue);
   }
   strip.show();
-  delay(beatMillis * 4 * 4);
+  delay(beatMillis * 16);
 }
 
 
@@ -849,10 +892,27 @@ void solid_color_walk_loop(int red, int green, int blue) {
 
 void color_walk_loop() {
   Serial.println("Entering color_walk_loop");
+
+  struct loop loops[16];
+
+  unsigned long startRoutineMillis = millis();
+
+  for(int i=0; i<16;i++) {
+    loops[i].targetStartMillis = startRoutineMillis + (beatMillis * i);
+    loops[i].targetEndMillis = loops[i].targetStartMillis + beatMillis;
+  }
+
+  int loopCtr=0;
   
   for(int a=0; a<4; a++) {
-    for(int b=0; b<4; b++) {
-      unsigned long startMillis = millis();
+    for(int b=0; b<4; b++,loopCtr++) {
+      if(millis() < loops[loopCtr].targetStartMillis) {
+        Serial.println(String(millis()) + " < " + String(loops[loopCtr].targetStartMillis));
+        delay(1);
+      }
+
+      loops[loopCtr].actualStartMillis = millis();
+      
       strip.clear();
       for(int c=b; c<strip.numPixels(); c += 1) {
         int hue = (firstPixelHue + c * 65536L / strip.numPixels()) % 65536;
@@ -880,18 +940,20 @@ void color_walk_loop() {
       if(firstPixelHue >= 65536) {
         firstPixelHue = firstPixelHue % 65536;
       }
-      // Serial.print("firstPixelHue: ");
-      // Serial.println(firstPixelHue);
-      
-      unsigned long endMillis = millis();
-      float durationMillis = endMillis - startMillis;
-      float leftoverMillis = beatMillis - durationMillis;
-      
-      if(leftoverMillis > 0) {     
-        delay(round(leftoverMillis));
+
+      loops[loopCtr].actualEndMillis = millis();
+
+      if(loops[loopCtr].actualEndMillis > loops[loopCtr].targetEndMillis) {
+        Serial.println("Falling behind: " + String(loops[loopCtr].actualEndMillis) + " > " + String(loops[loopCtr].targetEndMillis));
+      }
+
+      while(millis() < loops[loopCtr].targetEndMillis) {
+        delay(1);
       } 
     }
-  }  
+  }
+
+  Serial.println("Expected Loops: " + String((millis() - startRoutineMillis) / beatMillis) + " Actual Loops: " + String(loopCtr));
 }
 
 void greyscale_walk_loop() {
