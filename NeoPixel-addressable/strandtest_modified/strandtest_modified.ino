@@ -1,122 +1,16 @@
 #include <Adafruit_NeoPixel.h>
+#include <ArduinoJson.h>
+#include <ESP8266WebServer.h>
+#include <WM_Configer.h>
 
 #if !(defined(ESP8266)) 
 #error This code is intended to be run on the ESP8266
 #endif
 
-#define _WIFIMGR_LOGLEVEL_    4
-
-#include <ArduinoJson.h>
-#include <FS.h>
-
-#include <ESP8266WiFi.h>
-#include <DNSServer.h>
-#include <ESP8266WebServer.h>
-
-#include <ESP8266WiFiMulti.h>
-ESP8266WiFiMulti wifiMulti;
-
-#define USE_LITTLEFS      true
-
-#include <LittleFS.h>
-
-FS* filesystem = &LittleFS;
-#define FileFS  LittleFS
-#define FS_Name "LittleFS"
-#define ESP_getChipId()   (ESP.getChipId())
-#define ESP_DRD_USE_LITTLEFS    true
-#define ESP_DRD_USE_SPIFFS      false
-#define ESP_DRD_USE_EEPROM      false
-#define ESP8266_DRD_USE_RTC     false
-#define DOUBLERESETDETECTOR_DEBUG       true  //false
-
-#include <ESP_DoubleResetDetector.h>
-
-#define DRD_TIMEOUT 10
-#define DRD_ADDRESS 0
-DoubleResetDetector* drd;
-
-String ssid = "ESP_" + String(ESP_getChipId(), HEX);
-String password;
-
-// SSID and PW for your Router
-String Router_SSID;
-String Router_Pass;
-
-#define FORMAT_FILESYSTEM       false
-
-#define MIN_AP_PASSWORD_SIZE    8
-
-#define SSID_MAX_LEN            32
-#define PASS_MAX_LEN            64
-
-typedef struct
-{
-  char wifi_ssid[SSID_MAX_LEN];
-  char wifi_pw  [PASS_MAX_LEN];
-}  WiFi_Credentials;
-
-typedef struct
-{
-  String wifi_ssid;
-  String wifi_pw;
-}  WiFi_Credentials_String;
-
-#define NUM_WIFI_CREDENTIALS      2
-#define TZNAME_MAX_LEN            50
-#define TIMEZONE_MAX_LEN          50
-
-typedef struct
-{
-  WiFi_Credentials  WiFi_Creds [NUM_WIFI_CREDENTIALS];
-  char TZ_Name[TZNAME_MAX_LEN];     // "America/Toronto"
-  char TZ[TIMEZONE_MAX_LEN];        // "EST5EDT,M3.2.0,M11.1.0"
-  uint16_t checksum;
-} WM_Config;
-
-WM_Config         WM_config;
-
-#define  CONFIG_FILENAME              F("/wifi_cred.dat")
-
-bool initialConfig = false;
-
-#define USE_AVAILABLE_PAGES     true
-#define USE_ESP_WIFIMANAGER_NTP     true
-#define USE_CLOUDFLARE_NTP          false
-#define USING_CORS_FEATURE          true
-#define USE_DHCP_IP     true
-#define USE_CONFIGURABLE_DNS      true
-#define USE_CUSTOM_AP_IP  false
-
-#define USING_AFRICA        false
-#define USING_AMERICA       true
-#define USING_ANTARCTICA    false
-#define USING_ASIA          false
-#define USING_ATLANTIC      false
-#define USING_AUSTRALIA     false
-#define USING_EUROPE        false
-#define USING_INDIAN        false
-#define USING_PACIFIC       false
-#define USING_ETC_GMT       false
-
-IPAddress stationIP   = IPAddress(0, 0, 0, 0);
-IPAddress gatewayIP   = IPAddress(192, 168, 2, 1);
-IPAddress netMask     = IPAddress(255, 255, 255, 0);
-IPAddress dns1IP      = gatewayIP;
-IPAddress dns2IP      = IPAddress(8, 8, 8, 8);
-IPAddress APStaticIP  = IPAddress(192, 168, 232, 1);
-IPAddress APStaticGW  = IPAddress(192, 168, 232, 1);
-IPAddress APStaticSN  = IPAddress(255, 255, 255, 0);
-
-#include <ESP_WiFiManager.h>
-
 #define LED_PIN    D8
 #define MIC_PIN    A0
-
-#define LED_COUNT 600
-
+#define LED_COUNT 300
 #define BASE_BPM 174.0
-
 #define MAX_EFFECT_MODE 14
 
 int bpm;
@@ -127,214 +21,10 @@ int effectMode=0;
 
 int firstPixelHue = 0;
 
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
-
-uint8_t connectMultiWiFi();
-
-WiFi_AP_IPConfig  WM_AP_IPconfig;
-WiFi_STA_IPConfig WM_STA_IPconfig;
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 #define HTTP_REST_PORT 8080
 ESP8266WebServer server(HTTP_REST_PORT);
-
-void initAPIPConfigStruct(WiFi_AP_IPConfig &in_WM_AP_IPconfig) {
-  in_WM_AP_IPconfig._ap_static_ip   = APStaticIP;
-  in_WM_AP_IPconfig._ap_static_gw   = APStaticGW;
-  in_WM_AP_IPconfig._ap_static_sn   = APStaticSN;
-}
-
-void initSTAIPConfigStruct(WiFi_STA_IPConfig &in_WM_STA_IPconfig) {
-  in_WM_STA_IPconfig._sta_static_ip   = stationIP;
-  in_WM_STA_IPconfig._sta_static_gw   = gatewayIP;
-  in_WM_STA_IPconfig._sta_static_sn   = netMask;
-  in_WM_STA_IPconfig._sta_static_dns1 = dns1IP;
-  in_WM_STA_IPconfig._sta_static_dns2 = dns2IP;
-}
-
-void displayIPConfigStruct(WiFi_STA_IPConfig in_WM_STA_IPconfig) {
-  LOGERROR3(F("stationIP ="), in_WM_STA_IPconfig._sta_static_ip, ", gatewayIP =", in_WM_STA_IPconfig._sta_static_gw);
-  LOGERROR1(F("netMask ="), in_WM_STA_IPconfig._sta_static_sn);
-  LOGERROR3(F("dns1IP ="), in_WM_STA_IPconfig._sta_static_dns1, ", dns2IP =", in_WM_STA_IPconfig._sta_static_dns2);
-}
-
-void configWiFi(WiFi_STA_IPConfig in_WM_STA_IPconfig) {
-    WiFi.config(in_WM_STA_IPconfig._sta_static_ip, in_WM_STA_IPconfig._sta_static_gw, in_WM_STA_IPconfig._sta_static_sn, in_WM_STA_IPconfig._sta_static_dns1, in_WM_STA_IPconfig._sta_static_dns2);  
-}
-
-uint8_t connectMultiWiFi(void) {
-  
-#define WIFI_MULTI_1ST_CONNECT_WAITING_MS       2200L
-#define WIFI_MULTI_CONNECT_WAITING_MS           500L
-
-  uint8_t status;
-
-  LOGERROR(F("ConnectMultiWiFi with :"));
-
-  if ( (Router_SSID != "") && (Router_Pass != "") ) {
-    LOGERROR3(F("* Flash-stored Router_SSID = "), Router_SSID, F(", Router_Pass = "), Router_Pass );
-    LOGERROR3(F("* Add SSID = "), Router_SSID, F(", PW = "), Router_Pass );
-    wifiMulti.addAP(Router_SSID.c_str(), Router_Pass.c_str());
-  }
-
-  for (uint8_t i = 0; i < NUM_WIFI_CREDENTIALS; i++) {
-    if ( (String(WM_config.WiFi_Creds[i].wifi_ssid) != "") && (strlen(WM_config.WiFi_Creds[i].wifi_pw) >= MIN_AP_PASSWORD_SIZE) ) {
-      LOGERROR3(F("* Additional SSID = "), WM_config.WiFi_Creds[i].wifi_ssid, F(", PW = "), WM_config.WiFi_Creds[i].wifi_pw );
-    }
-  }
-  LOGERROR(F("Connecting MultiWifi..."));
-
-  int i = 0;
-  status = wifiMulti.run();
-  delay(WIFI_MULTI_1ST_CONNECT_WAITING_MS);
-
-  while ( ( i++ < 20 ) && ( status != WL_CONNECTED ) ) {
-    status = WiFi.status();
-
-    if ( status == WL_CONNECTED )
-      break;
-    else
-      delay(WIFI_MULTI_CONNECT_WAITING_MS);
-  }
-
-  if ( status == WL_CONNECTED ) {
-    LOGERROR1(F("WiFi connected after time: "), i);
-    LOGERROR3(F("SSID:"), WiFi.SSID(), F(",RSSI="), WiFi.RSSI());
-    LOGERROR3(F("Channel:"), WiFi.channel(), F(",IP address:"), WiFi.localIP() );
-  } else {
-    LOGERROR(F("WiFi not connected"));
-
-    drd->loop();
-
-    ESP.restart();
-  }
-  return status;
-}
-
-void printLocalTime() {
-  static time_t now;
-  
-  now = time(nullptr);
-  
-  if ( now > 1451602800 )
-  {
-    Serial.print("Local Date/Time: ");
-    Serial.print(ctime(&now));
-  }
-}
-
-void heartBeatPrint()
-{
-  printLocalTime();
-  static int num = 1;
-
-  if (WiFi.status() == WL_CONNECTED)
-    Serial.print(F("H"));        // H means connected to WiFi
-  else
-    Serial.print(F("F"));        // F means not connected to WiFi
-
-  if (num == 80)
-  {
-    Serial.println();
-    num = 1;
-  }
-  else if (num++ % 10 == 0)
-  {
-    Serial.print(F(" "));
-  }
-}
-
-void check_WiFi(void) {
-  if ( (WiFi.status() != WL_CONNECTED) ) {
-    Serial.println("\nWiFi lost. Call connectMultiWiFi in loop");
-    connectMultiWiFi();
-  }
-}
-
-void check_status(void) {
-  static ulong checkstatus_timeout  = 0;
-  static ulong checkwifi_timeout    = 0;
-
-  static ulong current_millis;
-
-#define WIFICHECK_INTERVAL    1000L
-#define HEARTBEAT_INTERVAL    60000L
-
-  current_millis = millis();
-
-  // Check WiFi every WIFICHECK_INTERVAL (1) seconds.
-  if ((current_millis > checkwifi_timeout) || (checkwifi_timeout == 0)) {
-    check_WiFi();
-    checkwifi_timeout = current_millis + WIFICHECK_INTERVAL;
-  }
-
-  // Print hearbeat every HEARTBEAT_INTERVAL (10) seconds.
-  if ((current_millis > checkstatus_timeout) || (checkstatus_timeout == 0)) {
-    heartBeatPrint();
-    checkstatus_timeout = current_millis + HEARTBEAT_INTERVAL;
-  }
-}
-
-int calcChecksum(uint8_t* address, uint16_t sizeToCalc) {
-  uint16_t checkSum = 0;
-  
-  for (uint16_t index = 0; index < sizeToCalc; index++) {
-    checkSum += * ( ( (byte*) address ) + index);
-  }
-
-  return checkSum;
-}
-
-
-bool loadConfigData()
-{
-  File file = FileFS.open(CONFIG_FILENAME, "r");
-  LOGERROR(F("LoadWiFiCfgFile "));
-
-  memset((void*) &WM_config,       0, sizeof(WM_config));
-  memset((void*) &WM_STA_IPconfig, 0, sizeof(WM_STA_IPconfig));
-
-  if (file) {
-    file.readBytes((char *) &WM_config,   sizeof(WM_config));
-    file.readBytes((char *) &WM_STA_IPconfig, sizeof(WM_STA_IPconfig));
-
-    file.close();
-    LOGERROR(F("OK"));
-
-    if ( WM_config.checksum != calcChecksum( (uint8_t*) &WM_config, sizeof(WM_config) - sizeof(WM_config.checksum) ) ) {
-      LOGERROR(F("WM_config checksum wrong"));
-      
-      return false;
-    }
-    
-    displayIPConfigStruct(WM_STA_IPconfig);
-
-    return true;
-  } else {
-    LOGERROR(F("failed"));
-
-    return false;
-  }
-}
-
-void saveConfigData() {
-  File file = FileFS.open(CONFIG_FILENAME, "w");
-  LOGERROR(F("SaveWiFiCfgFile "));
-
-  if (file) {
-    WM_config.checksum = calcChecksum( (uint8_t*) &WM_config, sizeof(WM_config) - sizeof(WM_config.checksum) );
-    
-    file.write((uint8_t*) &WM_config, sizeof(WM_config));
-
-    displayIPConfigStruct(WM_STA_IPconfig);
-
-    file.write((uint8_t*) &WM_STA_IPconfig, sizeof(WM_STA_IPconfig));
-
-    file.close();
-    LOGERROR(F("OK"));
-  } else {
-    LOGERROR(F("failed"));
-  }
-}
 
 void restServerRouting() {
   server.on("/effectMode", HTTP_GET, []() {
@@ -348,12 +38,13 @@ void restServerRouting() {
   });
   server.on("/bpm", HTTP_GET, []() {
     DynamicJsonDocument doc(512);
-
+    String buf;
+    
     doc["bpm"] = bpm;
     serializeJson(doc, buf);
     server.send(200, F("application/json"), buf);
   });
-  server.on("/bpm". HTTP_POST, []() {
+  server.on("/bpm", HTTP_POST, []() {
     String postBody = server.arg("plain");
 
     DynamicJsonDocument doc(512);
@@ -379,7 +70,7 @@ void restServerRouting() {
       
      }
     }
-  }
+  });
   server.on("/effectMode", HTTP_POST, []() {
     String postBody = server.arg("plain");
 
@@ -449,6 +140,8 @@ void handleNotFound() {
   server.send(404, "text/plain", message);
 }
 
+class WM_Configer * myWMConfiger;
+
 void setup() {
   pinMode(MIC_PIN, INPUT);
   
@@ -464,187 +157,9 @@ void setup() {
   strip.show();            // Turn OFF all pixels ASAP
   strip.setBrightness(255); // Set BRIGHTNESS  
 
-  Serial.print("\nStarting ConfigOnDoubleReset with DoubleResetDetect using " + String(FS_Name));
-  Serial.println(" on " + String(ARDUINO_BOARD));
-  Serial.println("ESP_WiFiManager Version " + String(ESP_WIFIMANAGER_VERSION));
-  Serial.println("ESP_DoubleResetDetector Version " + String(ESP_DOUBLE_RESET_DETECTOR_VERSION));
+  myWMConfiger = new WM_Configer();
 
-  if (FORMAT_FILESYSTEM)
-    FileFS.format();
-  
-  if (!FileFS.begin()) {
-    Serial.print(FS_Name);
-    Serial.println(F(" failed! AutoFormatting."));
-    FileFS.format();
-    if (!FileFS.begin()) {
-      delay(100);
-      Serial.println(F("LittleFS failed!. Please use SPIFFS or EEPROM. Stay forever"));
-
-      while (true) {
-        delay(1);
-      }
-    }
-  } else {
-    Serial.println("FS already formatted!");
-  }
-
-  drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
-  unsigned long startedAt = millis();
-
-  initAPIPConfigStruct(WM_AP_IPconfig);
-  initSTAIPConfigStruct(WM_STA_IPconfig);
-
-  ESP_WiFiManager ESP_wifiManager("ConfigOnDoubleReset");
-  ESP_wifiManager.setMinimumSignalQuality(-1);
-  ESP_wifiManager.setConfigPortalChannel(0);
-  ESP_wifiManager.setCORSHeader("Your Access-Control-Allow-Origin");
-  
-  Router_SSID = ESP_wifiManager.WiFi_SSID();
-  Router_Pass = ESP_wifiManager.WiFi_Pass();
-
-  Serial.println("ESP Self-Stored: SSID = " + Router_SSID + ", Pass = " + Router_Pass);
-
-  ssid.toUpperCase();
-  bool configDataLoaded = false;
-
-  if ( (Router_SSID != "") && (Router_Pass != "") ) {
-    LOGERROR3(F("* Add SSID = "), Router_SSID, F(", PW = "), Router_Pass);
-    wifiMulti.addAP(Router_SSID.c_str(), Router_Pass.c_str());
-
-    ESP_wifiManager.setConfigPortalTimeout(120); //If no access point name has been previously entered disable timeout.
-    Serial.println("Got stored Credentials. Timeout 120s for Config Portal");
-  }
-
-  if(loadConfigData()) {
-    configDataLoaded = true;
-    ESP_wifiManager.setConfigPortalTimeout(120); //If no access point name has been previously entered disable timeout.
-    Serial.println(F("Got stored Credentials. Timeout 120s for Config Portal")); 
-    if ( strlen(WM_config.TZ_Name) > 0 )
-    {
-      LOGERROR3(F("Current TZ_Name ="), WM_config.TZ_Name, F(", TZ = "), WM_config.TZ);
-      configTime(WM_config.TZ, "pool.ntp.org"); 
-    }
-    else {
-      Serial.println(F("Current Timezone is not set. Enter Config Portal to set."));
-    } 
-  } else {
-    Serial.println("Open Config Portal without Timeout: No stored Credentials.");
-    initialConfig = true;
-  }
-
-  if (drd->detectDoubleReset()) {
-    // DRD, disable timeout.
-    ESP_wifiManager.setConfigPortalTimeout(0);
-
-    Serial.println("Open Config Portal without Timeout: Double Reset Detected");
-    initialConfig = true;
-  }
-
-  if (initialConfig) {
-    Serial.print("Starting configuration portal @ ");
-    Serial.print(F("192.168.4.1"));
-    Serial.print(F(", SSID = "));
-    Serial.print(ssid);
-    Serial.print(F(", PWD = "));
-    Serial.println(password);
-
-    if (!ESP_wifiManager.startConfigPortal((const char *) ssid.c_str()))
-      Serial.println("Not connected to WiFi but continuing anyway.");
-    else {
-      Serial.println("WiFi connected...yeey :)");
-    }
-
-    // Stored  for later usage, from v1.1.0, but clear first
-    memset(&WM_config, 0, sizeof(WM_config));
-
-    for (uint8_t i = 0; i < NUM_WIFI_CREDENTIALS; i++)
-    {
-      String tempSSID = ESP_wifiManager.getSSID(i);
-      String tempPW   = ESP_wifiManager.getPW(i);
-
-      if (strlen(tempSSID.c_str()) < sizeof(WM_config.WiFi_Creds[i].wifi_ssid) - 1)
-        strcpy(WM_config.WiFi_Creds[i].wifi_ssid, tempSSID.c_str());
-      else
-        strncpy(WM_config.WiFi_Creds[i].wifi_ssid, tempSSID.c_str(), sizeof(WM_config.WiFi_Creds[i].wifi_ssid) - 1);
-
-      if (strlen(tempPW.c_str()) < sizeof(WM_config.WiFi_Creds[i].wifi_pw) - 1)
-        strcpy(WM_config.WiFi_Creds[i].wifi_pw, tempPW.c_str());
-      else
-        strncpy(WM_config.WiFi_Creds[i].wifi_pw, tempPW.c_str(), sizeof(WM_config.WiFi_Creds[i].wifi_pw) - 1);
-
-      // Don't permit NULL SSID and password len < MIN_AP_PASSWORD_SIZE (8)
-      if ( (String(WM_config.WiFi_Creds[i].wifi_ssid) != "") && (strlen(WM_config.WiFi_Creds[i].wifi_pw) >= MIN_AP_PASSWORD_SIZE) )
-      {
-        LOGERROR3(F("* Add SSID = "), WM_config.WiFi_Creds[i].wifi_ssid, F(", PW = "), WM_config.WiFi_Creds[i].wifi_pw );
-        wifiMulti.addAP(WM_config.WiFi_Creds[i].wifi_ssid, WM_config.WiFi_Creds[i].wifi_pw);
-      }
-    }
-
-    String tempTZ   = ESP_wifiManager.getTimezoneName();
-
-    if (strlen(tempTZ.c_str()) < sizeof(WM_config.TZ_Name) - 1)
-      strcpy(WM_config.TZ_Name, tempTZ.c_str());
-    else
-      strncpy(WM_config.TZ_Name, tempTZ.c_str(), sizeof(WM_config.TZ_Name) - 1);
-
-    const char * TZ_Result = ESP_wifiManager.getTZ(WM_config.TZ_Name);
-    
-    if (strlen(TZ_Result) < sizeof(WM_config.TZ) - 1)
-      strcpy(WM_config.TZ, TZ_Result);
-    else
-      strncpy(WM_config.TZ, TZ_Result, sizeof(WM_config.TZ_Name) - 1);
-         
-    if ( strlen(WM_config.TZ_Name) > 0 ) {
-      LOGERROR3(F("Saving current TZ_Name ="), WM_config.TZ_Name, F(", TZ = "), WM_config.TZ);
-      configTime(WM_config.TZ, "pool.ntp.org"); 
-    } else {
-      LOGERROR(F("Current Timezone Name is not set. Enter Config Portal to set."));
-    }
-
-    ESP_wifiManager.getSTAStaticIPConfig(WM_STA_IPconfig);
-
-    saveConfigData();
-  }
-  
-  Serial.println("Stored: SSID = " + Router_SSID + ", Pass = " + Router_Pass);
-
-  startedAt = millis();
-
-  if (!initialConfig)
-  {
-    // Load stored data, the addAP ready for MultiWiFi reconnection
-    if (!configDataLoaded)
-      loadConfigData();
-
-    for (uint8_t i = 0; i < NUM_WIFI_CREDENTIALS; i++)
-    {
-      // Don't permit NULL SSID and password len < MIN_AP_PASSWORD_SIZE (8)
-      if ( (String(WM_config.WiFi_Creds[i].wifi_ssid) != "") && (strlen(WM_config.WiFi_Creds[i].wifi_pw) >= MIN_AP_PASSWORD_SIZE) )
-      {
-        LOGERROR3(F("* Add SSID = "), WM_config.WiFi_Creds[i].wifi_ssid, F(", PW = "), WM_config.WiFi_Creds[i].wifi_pw );
-        wifiMulti.addAP(WM_config.WiFi_Creds[i].wifi_ssid, WM_config.WiFi_Creds[i].wifi_pw);
-      }
-    }
-
-    if ( WiFi.status() != WL_CONNECTED )
-    {
-      Serial.println("ConnectMultiWiFi in setup");
-
-      connectMultiWiFi();
-    }
-  }
-
-  Serial.print("After waiting ");
-  Serial.print((float) (millis() - startedAt) / 1000L);
-  Serial.print(" secs more in setup(), connection result is ");
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("connected. Local IP: ");
-    Serial.println(WiFi.localIP());
-  } else {
-    Serial.println(ESP_wifiManager.getStatus(WiFi.status()));
-  }
-
+  myWMConfiger->config_tree();
   bpm = BASE_BPM;
   beatMillis = (1.0 / (BASE_BPM / 60.0)) * 1000.0;
 
@@ -682,7 +197,8 @@ void handleSerialInput(char input) {
 void loop() {
   int micSensor = 0;
 
-  drd->loop();
+  myWMConfiger->dodrdloop();
+  
   server.handleClient();
   
   micSensor = analogRead(MIC_PIN);
