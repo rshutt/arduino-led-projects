@@ -19,3 +19,9 @@ In loop() near top -
 ```
   myWMConfiger->dodrdloop();
 ```
+
+# Warning - ESP_WiFiManager...
+
+[This](https://github.com/khoih-prog/ESP_WiFiManager/blob/master/README.md#howto-fix-multiple-definitions-linker-error) is some irritating crap, but I had to replace the `src` dir with `src_cpp` contents per the howto.  What a mess...
+
+
