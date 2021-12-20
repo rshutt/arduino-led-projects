@@ -8,12 +8,14 @@ Then in your main `.ino` file, use the following:
 
 Global scope - `class WM_Configer * myWMConfiger;`
 
-In setup() after Serial init - ```
+In setup() after Serial init - 
+```
   myWMConfiger = new WM_Configer();
 
   myWMConfiger->config_tree();
 ```
 
-In loop() near top - ```
+In loop() near top -
+```
   myWMConfiger->dodrdloop();
 ```
