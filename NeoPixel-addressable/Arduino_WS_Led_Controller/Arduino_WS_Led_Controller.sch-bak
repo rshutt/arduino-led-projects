@@ -252,43 +252,25 @@ Text GLabel 6750 2350 2    50   Output ~ 0
 $Comp
 L Device:R R4
 U 1 1 616E75C2
-P 6550 2600
-F 0 "R4" H 6480 2554 50  0000 R CNN
-F 1 "330" H 6480 2645 50  0000 R CNN
-F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 6480 2600 50  0001 C CNN
-F 3 "~" H 6550 2600 50  0001 C CNN
-	1    6550 2600
+P 6550 2550
+F 0 "R4" H 6480 2504 50  0000 R CNN
+F 1 "330" H 6480 2595 50  0000 R CNN
+F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 6480 2550 50  0001 C CNN
+F 3 "~" H 6550 2550 50  0001 C CNN
+	1    6550 2550
 	-1   0    0    1   
 $EndComp
-Wire Wire Line
-	6300 2350 6550 2350
-Wire Wire Line
-	6550 2450 6550 2350
-Connection ~ 6550 2350
-Wire Wire Line
-	6550 2350 6750 2350
-Wire Wire Line
-	6550 2750 6550 2900
 $Comp
 L Device:R R3
 U 1 1 616EACA8
-P 6250 2900
-F 0 "R3" V 6457 2900 50  0000 C CNN
-F 1 "1000" V 6366 2900 50  0000 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 6180 2900 50  0001 C CNN
-F 3 "~" H 6250 2900 50  0001 C CNN
-	1    6250 2900
-	0    -1   -1   0   
+P 6550 2950
+F 0 "R3" H 6400 3000 50  0000 C CNN
+F 1 "1000" H 6350 2900 50  0000 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" V 6480 2950 50  0001 C CNN
+F 3 "~" H 6550 2950 50  0001 C CNN
+	1    6550 2950
+	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	6000 2650 6000 2900
-Wire Wire Line
-	6000 2900 6100 2900
-Wire Wire Line
-	6400 2900 6550 2900
-Connection ~ 6550 2900
-Wire Wire Line
-	6550 2900 6550 3050
 $Comp
 L power:+5V #PWR07
 U 1 1 616F14DB
@@ -413,12 +395,12 @@ $EndComp
 $Comp
 L power:GND #PWR010
 U 1 1 6174D4B3
-P 6000 3150
-F 0 "#PWR010" H 6000 2900 50  0001 C CNN
-F 1 "GND" H 6000 3000 50  0000 C CNN
-F 2 "" H 6000 3150 50  0001 C CNN
-F 3 "" H 6000 3150 50  0001 C CNN
-	1    6000 3150
+P 6100 3250
+F 0 "#PWR010" H 6100 3000 50  0001 C CNN
+F 1 "GND" H 6100 3100 50  0000 C CNN
+F 2 "" H 6100 3250 50  0001 C CNN
+F 3 "" H 6100 3250 50  0001 C CNN
+	1    6100 3250
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -545,7 +527,7 @@ U 1 1 617A57C0
 P 5550 2600
 F 0 "C5" H 5665 2646 50  0000 L CNN
 F 1 "0.1uF" H 5665 2555 50  0000 L CNN
-F 2 "Capacitor_THT:C_Disc_D3.0mm_W2.0mm_P2.50mm" H 5588 2450 50  0001 C CNN
+F 2 "Capacitor_THT:C_Disc_D7.5mm_W5.0mm_P5.00mm" H 5588 2450 50  0001 C CNN
 F 3 "~" H 5550 2600 50  0001 C CNN
 	1    5550 2600
 	1    0    0    -1  
@@ -556,14 +538,7 @@ Connection ~ 5550 2350
 Wire Wire Line
 	5550 2350 5400 2350
 Wire Wire Line
-	5550 3050 6000 3050
-Wire Wire Line
-	5550 2750 5550 3050
-Wire Wire Line
-	6000 3150 6000 3050
-Connection ~ 6000 3050
-Wire Wire Line
-	6000 3050 6550 3050
+	6100 3250 6100 3150
 Wire Wire Line
 	2850 4100 2550 4100
 Wire Wire Line
@@ -585,10 +560,10 @@ F 3 "" H 950 200 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Arduino_WS_Led_Controller-eagle-import:MOUNTINGHOLE3.0THIN U?
+L Arduino_WS_Led_Controller-eagle-import:MOUNTINGHOLE3.0THIN U5
 U 1 1 61821DC1
 P 200 200
-F 0 "U?" H 250 250 50  0001 C CNN
+F 0 "U5" H 250 250 50  0001 C CNN
 F 1 "MOUNTINGHOLE3.0THIN" H 200 200 50  0001 C CNN
 F 2 "MountingHole:MountingHole_3.2mm_M3" H 200 200 50  0001 C CNN
 F 3 "" H 200 200 50  0001 C CNN
@@ -596,10 +571,10 @@ F 3 "" H 200 200 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Arduino_WS_Led_Controller-eagle-import:MOUNTINGHOLE3.0THIN U?
+L Arduino_WS_Led_Controller-eagle-import:MOUNTINGHOLE3.0THIN U6
 U 1 1 61823D4B
 P 450 200
-F 0 "U?" H 500 250 50  0001 C CNN
+F 0 "U6" H 500 250 50  0001 C CNN
 F 1 "MOUNTINGHOLE3.0THIN" H 450 200 50  0001 C CNN
 F 2 "MountingHole:MountingHole_3.2mm_M3" H 450 200 50  0001 C CNN
 F 3 "" H 450 200 50  0001 C CNN
@@ -607,14 +582,42 @@ F 3 "" H 450 200 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Arduino_WS_Led_Controller-eagle-import:MOUNTINGHOLE3.0THIN U?
+L Arduino_WS_Led_Controller-eagle-import:MOUNTINGHOLE3.0THIN U8
 U 1 1 61827D6A
 P 700 200
-F 0 "U?" H 750 250 50  0001 C CNN
+F 0 "U8" H 750 250 50  0001 C CNN
 F 1 "MOUNTINGHOLE3.0THIN" H 700 200 50  0001 C CNN
 F 2 "MountingHole:MountingHole_3.2mm_M3" H 700 200 50  0001 C CNN
 F 3 "" H 700 200 50  0001 C CNN
 	1    700  200 
 	1    0    0    -1  
 $EndComp
+Wire Wire Line
+	5550 2650 5550 2750
+Connection ~ 5550 2750
+Wire Wire Line
+	6550 2700 6550 2750
+Wire Wire Line
+	6100 3150 6550 3150
+Connection ~ 6100 3150
+Wire Wire Line
+	6550 3150 6550 3100
+Wire Wire Line
+	5550 2750 5550 3150
+Wire Wire Line
+	5550 3150 6100 3150
+Wire Wire Line
+	6300 2350 6550 2350
+Wire Wire Line
+	6550 2400 6550 2350
+Connection ~ 6550 2350
+Wire Wire Line
+	6550 2350 6750 2350
+Wire Wire Line
+	6550 2750 6000 2750
+Wire Wire Line
+	6000 2750 6000 2650
+Connection ~ 6550 2750
+Wire Wire Line
+	6550 2750 6550 2800
 $EndSCHEMATC
