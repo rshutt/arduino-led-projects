@@ -3,14 +3,14 @@
 #include <ESP8266WebServer.h>
 #include <WM_Configer.h>
 
-#if !(defined(ESP8266)) 
+#if !(defined(ESP8266))
 #error This code is intended to be run on the ESP8266
 #endif
 
 #define LED_PIN    D8
 #define MIC_PIN    A0
-#define LED_COUNT 300
-#define BASE_BPM 174.0
+#define LED_COUNT 600
+#define BASE_BPM 128.0
 #define MAX_EFFECT_MODE 14
 
 int bpm;
@@ -39,7 +39,7 @@ void restServerRouting() {
   server.on("/bpm", HTTP_GET, []() {
     DynamicJsonDocument doc(512);
     String buf;
-    
+
     doc["bpm"] = bpm;
     serializeJson(doc, buf);
     server.send(200, F("application/json"), buf);
@@ -67,7 +67,7 @@ void restServerRouting() {
      DynamicJsonDocument responseDoc(512);
 
      if(postObj.containsKey("bpm")) {
-      
+
      }
     }
   });
@@ -80,9 +80,9 @@ void restServerRouting() {
     if (error) {
       Serial.print(F("Error parsing JSON "));
       Serial.println(error.c_str());
- 
+
       String msg = error.c_str();
- 
+
       server.send(400, F("text/html"),
         "Error parsing json body!<br>\n" + msg);
     } else {
@@ -92,7 +92,7 @@ void restServerRouting() {
       Serial.println(foo);
 
       DynamicJsonDocument responseDoc(512);
-         
+
       if(postObj.containsKey("effectMode")) {
         int newEffectMode = postObj["effectMode"];
 
@@ -100,7 +100,7 @@ void restServerRouting() {
           Serial.println("Setting effect mode to: " + String(newEffectMode));
 
           effectMode = newEffectMode;
-          
+
           responseDoc["status"] = "OK";
           responseDoc["effectMode"] = newEffectMode;
           String buf;
@@ -112,7 +112,7 @@ void restServerRouting() {
           responseDoc["reason"] = "No such effect mode: " + String(newEffectMode);
           String buf;
           serializeJson(responseDoc, buf);
-          server.send(400, F("application/json"), buf);         
+          server.send(400, F("application/json"), buf);
         }
       } else {
         responseDoc["status"] = "FAIL";
@@ -144,7 +144,7 @@ class WM_Configer * myWMConfiger;
 
 void setup() {
   pinMode(MIC_PIN, INPUT);
-  
+
   Serial.begin(115200);
 
   while(!Serial) {
@@ -155,7 +155,7 @@ void setup() {
 
   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   strip.show();            // Turn OFF all pixels ASAP
-  strip.setBrightness(255); // Set BRIGHTNESS  
+  strip.setBrightness(255); // Set BRIGHTNESS
 
   myWMConfiger = new WM_Configer();
 
@@ -164,7 +164,7 @@ void setup() {
   beatMillis = (1.0 / (BASE_BPM / 60.0)) * 1000.0;
 
   beatMillis = beatMillis/8;
-  
+
   Serial.print("Beat should be every: ");
   Serial.print(beatMillis);
   Serial.print(" milliseconds\n");
@@ -183,11 +183,11 @@ void handleSerialInput(char input) {
 
   if(input != -1) {
     if(input == '+' && effectMode <  MAX_EFFECT_MODE) {
-      effectMode++; 
+      effectMode++;
     } else if(input == '-' && effectMode > 0) {
       effectMode--;
     }
-      
+
     Serial.print("Switching to effect mode ");
     Serial.print(effectMode);
     Serial.print("\n");
@@ -198,11 +198,11 @@ void loop() {
   int micSensor = 0;
 
   myWMConfiger->dodrdloop();
-  
+
   server.handleClient();
-  
+
   micSensor = analogRead(MIC_PIN);
- 
+
   if (Serial.available()) {
     handleSerialInput(Serial.read());
   }
@@ -240,7 +240,7 @@ void loop() {
       break;
     case 10:
       solid_color(255, 255, 255);
-      break; 
+      break;
     case 11:
       breathe(255, 255, 255);
       break;
@@ -262,7 +262,7 @@ void loop() {
   }
 }
 
-struct loop { 
+struct loop {
   unsigned long targetStartMillis;
   unsigned long actualStartMillis;
   unsigned long targetEndMillis;
@@ -273,7 +273,7 @@ struct loop {
 void breathe(int red, int green, int blue) {
   Serial.print("Entering breathe with color: ");
   Serial.print((red << 16) + (green << 8) + blue, HEX);
-  Serial.print("\n"); 
+  Serial.print("\n");
 
   strip.clear();
   float max_brightness = 200;
@@ -283,14 +283,14 @@ void breathe(int red, int green, int blue) {
 
   for(int a=0; a<smoothness_pts; a++) {
     unsigned long startMillis = millis();
-    
+
     float intensity = (max_brightness - 20) * (exp(-(pow(((a/smoothness_pts)-beta)/gamma,2.0))/2.0));
     strip.setBrightness(intensity + 20);
 
     // Serial.print("Intensity is: ");
     // Serial.print(intensity);
     // Serial.print("\n");
-      
+
     for(int c=0; c<strip.numPixels();c++) {
       strip.setPixelColor(c, red, green, blue);
     }
@@ -301,18 +301,18 @@ void breathe(int red, int green, int blue) {
     // Serial.println(durationMillis);
     float leftoverMillis = beatMillis - durationMillis;
     // Serial.println(leftoverMillis);
-    
+
     // Serial.println(beatMillis);
-    
-    if(leftoverMillis > 0) {     
+
+    if(leftoverMillis > 0) {
       delay(round(leftoverMillis));
     }
   }
 
   // Reset the max brightness!
-  
+
   strip.setBrightness(255);
-   
+
 }
 
 
@@ -322,7 +322,7 @@ void solid_color(int red, int green, int blue) {
   Serial.print("\n");
 
   if(red != 255 && green != 255 && blue != 255) {
-    // Power can go crazy here!!! 
+    // Power can go crazy here!!!
     if(red > 200) {
       red = 200;
     }
@@ -335,7 +335,7 @@ void solid_color(int red, int green, int blue) {
       blue = 200;
     }
   }
-  
+
   strip.clear();
   for(int c=0;c<strip.numPixels();c++) {
     strip.setPixelColor(c, red, green, blue);
@@ -366,10 +366,10 @@ void nearly_solid_color(int red, int green, int blue) {
       unsigned long endMillis = millis();
       float durationMillis = endMillis - startMillis;
       float leftoverMillis = beatMillis - durationMillis;
-      
-      if(leftoverMillis > 0) {     
+
+      if(leftoverMillis > 0) {
         delay(round(leftoverMillis));
-      } 
+      }
     }
   }
 }
@@ -378,7 +378,7 @@ void solid_color_walk_loop(int red, int green, int blue) {
   Serial.print("Entering solid color walk loop with color: ");
   Serial.print((red << 16) + (green << 8) + blue, HEX);
   Serial.print("\n");
-  
+
   for(int a=0; a<4; a++) {
     for(int b=0; b<4; b++) {
       unsigned long startMillis = millis();
@@ -386,7 +386,7 @@ void solid_color_walk_loop(int red, int green, int blue) {
       for(int c=b; c<strip.numPixels(); c += 1) {
         // Every 3rd pixel will be shifted forward 1
         // or maybe they just don't show at all?
-        
+
         if(random(3) != 0) {
           strip.setPixelColor(c+1, red, green, blue);
           c+=4;
@@ -398,10 +398,10 @@ void solid_color_walk_loop(int red, int green, int blue) {
       unsigned long endMillis = millis();
       float durationMillis = endMillis - startMillis;
       float leftoverMillis = beatMillis - durationMillis;
-      
-      if(leftoverMillis > 0) {     
+
+      if(leftoverMillis > 0) {
         delay(round(leftoverMillis));
-      } 
+      }
     }
   }
 }
@@ -419,7 +419,7 @@ void color_walk_loop() {
   }
 
   int loopCtr=0;
-  
+
   for(int a=0; a<4; a++) {
     for(int b=0; b<4; b++,loopCtr++) {
       if(millis() < loops[loopCtr].targetStartMillis) {
@@ -428,17 +428,17 @@ void color_walk_loop() {
       }
 
       loops[loopCtr].actualStartMillis = millis();
-      
+
       strip.clear();
       for(int c=b; c<strip.numPixels(); c += 1) {
         int hue = (firstPixelHue + c * 65536L / strip.numPixels()) % 65536;
         // Serial.print("Pixel hue: ");
         // Serial.println(hue);
-        uint32_t color = strip.gamma32(strip.ColorHSV(hue)); 
+        uint32_t color = strip.gamma32(strip.ColorHSV(hue));
 
         // Every 3rd pixel will be shifted forward 1
         // or maybe they just don't show at all?
-        
+
         if(random(3) != 0) {
           strip.setPixelColor(c+1, color);
           c+=4;
@@ -449,9 +449,9 @@ void color_walk_loop() {
       strip.show();
 
       // This is what causes the overall "color walk" wherein it
-      // walks the starting color through the entire strip, one 
+      // walks the starting color through the entire strip, one
       // LED at a time.
-      
+
       firstPixelHue += 65536 / (LED_COUNT - 1);
       if(firstPixelHue >= 65536) {
         firstPixelHue = firstPixelHue % 65536;
@@ -465,7 +465,7 @@ void color_walk_loop() {
 
       while(millis() < loops[loopCtr].targetEndMillis) {
         delay(1);
-      } 
+      }
     }
   }
 
@@ -482,7 +482,7 @@ void greyscale_walk_loop() {
       for(int c=b; c<strip.numPixels(); c += 1) {
         // Every 3rd pixel will be shifted forward 1
         // or maybe they just don't show at all?
-        
+
         if(random(3) != 0) {
           strip.setPixelColor(c+1, 255, 255, 255);
           c+=4;
@@ -493,19 +493,19 @@ void greyscale_walk_loop() {
       strip.show();
 
       // This is what causes the overall "color walk" wherein it
-      // walks the starting color through the entire strip, one 
+      // walks the starting color through the entire strip, one
       // LED at a time.
-      
+
       firstPixelHue += 65536 / (LED_COUNT - 1);
       unsigned long endMillis = millis();
       float durationMillis = endMillis - startMillis;
       float leftoverMillis = beatMillis - durationMillis;
 
-      if(leftoverMillis > 0) {     
+      if(leftoverMillis > 0) {
         delay(round(leftoverMillis));
-      }     
+      }
     }
-  }  
+  }
 }
 
 void greyscale_random_loop() {
@@ -517,7 +517,7 @@ void greyscale_random_loop() {
       strip.clear();
       for(int c=0; c<strip.numPixels(); c += 1) {
         int greyscale = random(5);
-        
+
         strip.setPixelColor(c, greyscale * (256/4), greyscale * (256/4), greyscale * (256/4));
       }
       strip.show();
@@ -526,9 +526,9 @@ void greyscale_random_loop() {
       float durationMillis = endMillis - startMillis;
       float leftoverMillis = beatMillis - durationMillis;
 
-      if(leftoverMillis > 0) {     
+      if(leftoverMillis > 0) {
         delay(round(leftoverMillis));
-      } 
+      }
     }
   }
 }
