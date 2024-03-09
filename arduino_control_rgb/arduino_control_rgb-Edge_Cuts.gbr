@@ -1,0 +1,26 @@
+%TF.GenerationSoftware,KiCad,Pcbnew,(6.0.2-0)*%
+%TF.CreationDate,2024-01-10T11:36:12-05:00*%
+%TF.ProjectId,arduino_control_rgb,61726475-696e-46f5-9f63-6f6e74726f6c,rev?*%
+%TF.SameCoordinates,Original*%
+%TF.FileFunction,Profile,NP*%
+%FSLAX46Y46*%
+G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
+G04 Created by KiCad (PCBNEW (6.0.2-0)) date 2024-01-10 11:36:13*
+%MOMM*%
+%LPD*%
+G01*
+G04 APERTURE LIST*
+%TA.AperFunction,Profile*%
+%ADD10C,0.100000*%
+%TD*%
+G04 APERTURE END LIST*
+D10*
+X193040000Y0D02*
+X295910000Y0D01*
+X295910000Y0D02*
+X295910000Y-39370000D01*
+X295910000Y-39370000D02*
+X193040000Y-39370000D01*
+X193040000Y-39370000D02*
+X193040000Y0D01*
+M02*

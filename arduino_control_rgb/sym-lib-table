@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "Arduino_WS_Led_Controller-eagle-import")(type "Legacy")(uri "/Users/randall/Environment/arduino-led-projects/NeoPixel-addressable/Arduino_WS_Led_Controller/Arduino_WS_Led_Controller-eagle-import.lib")(options "")(descr ""))
+)
