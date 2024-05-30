@@ -22,7 +22,7 @@
 #define REMOTE_TWO 0xFF629D
 #define REMOTE_THREE 0xFFE21D
 #define REMOTE_FOUR 0xFF22DD
-
+#define REMOTE_FIVE 0xFF02FD
 
 #define VISUAL_SOLID 1
 #define VISUAL_BREATHE 2
@@ -169,6 +169,14 @@ void loop() {
       case REMOTE_FOUR:
         if(currentVisual != 4) {
           currentVisual = 4;
+          Serial.print("changing visual to ");
+          Serial.println(visuals[currentVisual]);
+          changed = true;
+        }
+
+      case REMOTE_FIVE:
+        if(currentVisual != 5) {
+          currentVisual = 5;
           Serial.print("changing visual to ");
           Serial.println(visuals[currentVisual]);
           changed = true;
